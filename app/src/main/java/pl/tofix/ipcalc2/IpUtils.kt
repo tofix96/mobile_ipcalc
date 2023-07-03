@@ -1,5 +1,7 @@
 package pl.tofix.ipcalc2
 
+import java.net.InetAddress
+import java.net.NetworkInterface
 import kotlin.math.pow
 
 fun calculateNetworkAddress(ip: String, mask: String): String {
@@ -54,7 +56,6 @@ fun calculateMaxHost(ip: String, subnetMask: String): String {
     val broadcastAddress = calculateBroadcast(ip, subnetMask)
     val maxHostParts = broadcastAddress.split('.').map { it.toInt() }.toMutableList()
     maxHostParts[3]--
-
     return maxHostParts.joinToString(".")
 }
 
@@ -70,10 +71,111 @@ fun calculateMaxSubnets(mask: String): Int {
     val maxSubnets = 2.toDouble().pow(hostBits - 2)
     return maxSubnets.toInt()
 }
-fun validateTextValue(value: String): Boolean {
-    val ipAddressPattern = Regex("""^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$""")
 
-    val subnetMaskPattern = Regex("""^(\\/([0-9]|[12]\\d|3[0-2]))$""")
+fun ipcheck(): Triple<String?, String?, String>? {
+    try {
+        val networkInterfaces = NetworkInterface.getNetworkInterfaces()
 
-    return ipAddressPattern.matches(value) || subnetMaskPattern.matches(value)
+        while (networkInterfaces.hasMoreElements()) {
+            val networkInterface = networkInterfaces.nextElement()
+            println("Nazwa interfejsu: ${networkInterface.displayName}")
+
+            if (networkInterface.isUp) {
+                val addresses = networkInterface.interfaceAddresses
+
+                for (address in addresses) {
+                    val inetAddress = address.address
+
+                    if (!inetAddress.isLoopbackAddress && inetAddress is InetAddress && inetAddress.hostAddress.indexOf(
+                            ':'
+                        ) == -1
+                    ) {
+                        val ipAddress = inetAddress.hostAddress
+                        val subnetMask = getSubnetMask(address.networkPrefixLength)
+                        return Triple(ipAddress, subnetMask, networkInterface.displayName)
+                    }
+                }
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+
+    return null
 }
+
+fun getSubnetMask(networkPrefixLength: Short): String {
+    val maskBits = 0xffffffff shl 32 - networkPrefixLength
+    val octets = mutableListOf<String>()
+
+    octets.add((maskBits shr 24 and 0xff).toString())
+    octets.add((maskBits shr 16 and 0xff).toString())
+    octets.add((maskBits shr 8 and 0xff).toString())
+    octets.add((maskBits and 0xff).toString())
+
+    return octets.joinToString(".")
+}
+
+fun isValidIpAddress(ip: String): Boolean {
+    fun inRange(n: Int): Boolean {
+        return n in 0..255
+    }
+
+    fun hasLeadingZero(n: String): Boolean {
+        return n.length > 1 && n[0] == '0'
+    }
+
+    val parts = ip.split(".")
+    if (parts.size != 4) {
+        return false
+    }
+
+    for (part in parts) {
+        if (hasLeadingZero(part) || part.isEmpty()) {
+            return false
+        }
+
+        try {
+            val num = part.toInt()
+            if (!inRange(num)) {
+                return false
+            }
+        } catch (e: NumberFormatException) {
+            return false
+        }
+    }
+
+    return true
+}
+
+fun isValidNetmaskAddress(mask: String): Boolean {
+    val parts = mask.split(".")
+    if (parts.size != 4) {
+        return false
+    }
+
+    val binary = StringBuilder()
+
+    for (part in parts) {
+        try {
+            val num = part.toInt()
+            if (num < 0 || num > 255) {
+                return false
+            }
+
+            binary.append(Integer.toBinaryString(num).padStart(8, '0'))
+        } catch (e: NumberFormatException) {
+            return false
+        }
+    }
+
+    val binaryString = binary.toString()
+    if (binaryString.contains("0")) {
+        val index = binaryString.indexOfFirst { it == '0' }
+        if (binaryString.substring(index).contains("1")) {
+            return false
+        }
+    }
+    return true
+}
+

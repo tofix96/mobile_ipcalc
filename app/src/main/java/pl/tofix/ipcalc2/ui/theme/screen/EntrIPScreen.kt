@@ -12,7 +12,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import pl.tofix.ipcalc2.Screen
-import pl.tofix.ipcalc2.validateTextValue
+import pl.tofix.ipcalc2.*
 
 @Composable
 fun EntrIPScreen(navController: NavController) {
@@ -24,29 +24,30 @@ fun EntrIPScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             var textValue by remember { mutableStateOf("") }
-            var isTextValueValid by remember { mutableStateOf(true) }
-
             var textValue2 by remember { mutableStateOf("") }
-            var isTextValue2Valid by remember { mutableStateOf(true) }
+            var isValidIp by remember { mutableStateOf(false) }
+            var isValidNetmask by remember { mutableStateOf(false) }
+
             TextField(
                 value = textValue,
                 onValueChange = {
                     textValue = it
-                    isTextValueValid = validateTextValue(it)
+                    isValidIp = isValidIpAddress(it)
                 },
-                label = { Text("Podaj IP w formacie xxx.xxx.xxx.xxx") },
+                label = { Text("Podaj IP (xxx.xxx.xxx.xxx) ") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                isError = !isTextValueValid
+                isError = !isValidIp
             )
+
             TextField(
                 value = textValue2,
                 onValueChange = {
                     textValue2 = it
-                    isTextValue2Valid = validateTextValue(it)
+                    isValidNetmask = isValidNetmaskAddress(it)
                 },
-                label = { Text("Podaj prefix sieci") },
+                label = { Text("Podaj maskę (xxx.xxx.xxx.xxx)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                isError = !isTextValue2Valid
+                isError = !isValidNetmask
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -60,20 +61,21 @@ fun EntrIPScreen(navController: NavController) {
                 Button(
                     modifier = Modifier.padding(16.dp),
                     onClick = {
-                        navController.navigate(
-                            route = Screen.Calced.passIpAndMask(
-                                textValue,
-                                textValue2
+                        if (isValidIp && isValidNetmask) {
+                            navController.navigate(
+                                route = Screen.Calced.passIpAndMask(
+                                    textValue,
+                                    textValue2
+                                )
                             )
-                        )
-                    }
+                        }
+                    },
+                    enabled = isValidIp && isValidNetmask
                 ) {
                     Text(text = "Oblicz")
                 }
-
-
-
             }
         }
     }
 }
+
