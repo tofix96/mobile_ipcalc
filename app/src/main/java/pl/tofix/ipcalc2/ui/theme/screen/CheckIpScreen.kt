@@ -36,13 +36,17 @@ fun CheckIpScreen(navController: NavController) {
                     onClick = { navController.popBackStack() }) {
                     Text(text = "Cofnij")
                 }
-                Button(modifier = Modifier.padding(16.dp), onClick = {
-                    navController.navigate(
-                        route = Screen.Calced.passIpAndMask(
-                            ipAddress, subnetMask
+                Button(
+                    modifier = Modifier.padding(16.dp),
+                    onClick = {
+                        navController.navigate(
+                            route = Screen.Calced.passIpAndMask(
+                                ipAddress, subnetMask
+                            )
                         )
-                    )
-                }) {
+                    },
+                    enabled = ipAddress != "N" && subnetMask != "N"
+                ) {
                     Text(text = "Oblicz IP")
                 }
             }
